@@ -1,9 +1,14 @@
 <?php
+// 1. ຕັ້ງຄ່າ Header (No Cache & JSON)
+header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
+header("Cache-Control: post-check=0, pre-check=0", false);
+header("Pragma: no-cache");
 header('Content-Type: application/json; charset=utf-8');
 
-// 1. ເຊື່ອມຕໍ່ຖານຂໍ້ມູນ
+// 2. ເຊື່ອມຕໍ່ຖານຂໍ້ມູນ
+// ⚠️⚠️ ແກ້ໄຂຂໍ້ມູນ DB ຂອງເຈົ້າຢູ່ບ່ອນນີ້ ⚠️⚠️
 $host = 'localhost';
-$dbname = 'ppshop-js'; // ⚠️ ຢ່າລືມແກ້ຊື່ DB
+$dbname = 'ppshop-js'; 
 $username = 'root';
 $password = '';
 
@@ -11,27 +16,26 @@ try {
     $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8mb4", $username, $password);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 } catch (PDOException $e) {
-    echo json_encode(["status" => "error", "message" => "DB Connection failed"]);
+    echo json_encode(["success" => false, "price_text" => "Database Error"]);
     exit;
 }
 
-// ==========================================
-// ⚙️ ຕັ້ງຄ່າຄ່າທຳນຽມ (Config)
-// ==========================================
-$fee_percent = 60; // ໃສ່ເປີເຊັນທີ່ຕ້ອງການບວກເພີ່ມສຳລັບບັດເຕີມເງິນ (ຕົວຢ່າງ: 20%)
+// 3. ຮັບຄ່າຄົ້ນຫາ (ຈາກ URL ?game=...)
+$searchGame = isset($_GET['game']) ? trim($_GET['game']) : '';
 
-// 2. ຮັບຄ່າຄົ້ນຫາ
-$searchGame = isset($_GET['game']) ? $_GET['game'] : null;
+// 4. Logic ຄົ້ນຫາ (Smart Search)
+// ຕັດຍະຫວ່າງ, ເຄື່ອງໝາຍ +, ແລະ %20 ອອກໃຫ້ໝົດ ເພື່ອໃຫ້ທຽບກັນໄດ້ 100%
+$cleanSearch = str_replace([' ', '+', '%20'], '', $searchGame);
 
-// 3. ດຶງຂໍ້ມູນ
-if ($searchGame) {
+if ($cleanSearch) {
+    // ຄົ້ນຫາໂດຍການຕັດຍະຫວ່າງໃນ DB ອອກຄືກັນ ແລ້ວທຽບກັນ
     $sql = "SELECT * FROM game_packages 
-            WHERE game_name LIKE ? 
+            WHERE REPLACE(REPLACE(game_name, ' ', ''), '+', '') LIKE ? 
             ORDER BY game_name ASC, sort_order ASC, amount ASC";
-    $params = ["%$searchGame%"];
+    $params = ["%$cleanSearch%"];
 } else {
-    $sql = "SELECT * FROM game_packages 
-            ORDER BY game_name ASC, sort_order ASC, amount ASC";
+    // ຖ້າບໍ່ພິມຫຍັງມາ ໃຫ້ດຶງໝົດ (ຫຼືຈະປ່ຽນເປັນບໍ່ສະແດງກໍໄດ້)
+    $sql = "SELECT * FROM game_packages ORDER BY game_name ASC, sort_order ASC, amount ASC";
     $params = [];
 }
 
@@ -39,68 +43,55 @@ $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
 $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// 4. ຈັດກຸ່ມຂໍ້ມູນ
-$groupedData = [];
+// 5. ປະມວນຜົນຂໍ້ມູນ
+$finalTextList = [];
 
-foreach ($results as $row) {
-    $gameName = $row['game_name'];
-    $packageName = $row['package_name'];
-    $rawAmount = $row['amount'];
-
-    // --- ຄິດໄລ່ລາຄາໂອນ (Normal) ---
-    // ປັດຂຶ້ນເປັນຫຼັກ 1,000
-    $roundedNormal = ceil($rawAmount / 1000) * 1000;
-    $priceNormal = number_format($roundedNormal); 
-
-    // --- ຄິດໄລ່ລາຄາບັດ (Card) ---
-    // ເອົາລາຄາໂອນ ມາບວກເປີເຊັນເພີ່ມ ($fee_percent)
-    $cardAmount = $roundedNormal * (1 + ($fee_percent / 100));
-    // ປັດຂຶ້ນເປັນຫຼັກ 1,000 ອີກຄັ້ງ
-    $roundedCard = ceil($cardAmount / 1000) * 1000;
-    $priceCard = number_format($roundedCard);
-
-    if (!isset($groupedData[$gameName])) {
-        // ແຍກ array ເກັບສອງແບບ
-        $groupedData[$gameName] = [
-            'normal' => [],
-            'card' => []
-        ];
-    }
-
-    // ເພີ່ມຂໍ້ມູນ (ໃຊ້ Format : ແລະ ₭ ຕາມທີ່ຕ້ອງການ)
-    $groupedData[$gameName]['normal'][] = "   {$packageName} : {$priceNormal} ₭";
-    $groupedData[$gameName]['card'][]   = "   {$packageName} : {$priceCard} ₭";
-}
-
-// 5. ສ້າງ JSON ຜົນລັບ
-$finalOutput = [];
-
-if (empty($groupedData)) {
-    $finalOutput = ["status" => "error", "message" => "ບໍ່ພົບຂໍ້ມູນ"];
+if (empty($results)) {
+    // ກໍລະນີບໍ່ພົບຂໍ້ມູນ
+    echo json_encode([
+        "success" => false,
+        "game_name" => "Not Found",
+        "price_text" => "❌ ບໍ່ພົບຂໍ້ມູນເກມທີ່ຄົ້ນຫາ: " . htmlspecialchars($searchGame)
+    ], JSON_UNESCAPED_UNICODE);
 } else {
-    foreach ($groupedData as $name => $types) {
+    
+    $groupedData = [];
+    foreach ($results as $row) {
+        $gameName = trim($row['game_name']);
         
-        // --- ສ່ວນທີ 1: ລາຄາໂອນ ---
-        $normalItems = $types['normal'];
-        array_unshift($normalItems, "\n*{$name}*"); // ໃສ່ຫົວຂໍ້
-        $blockNormal = implode("\n", $normalItems);
+        // 🔥 Logic ເລືອກຊື່ (Custom Name vs Original Name)
+        // ຖ້າມີ custom_name (ທີ່ແກ້ໃນ UI) ໃຫ້ໃຊ້ໂຕນັ້ນ, ຖ້າບໍ່ມີ ໃຫ້ໃຊ້ package_name ເດີມ
+        $displayName = !empty($row['custom_name']) ? $row['custom_name'] : $row['package_name'];
+        
+        // 🔥 Logic ປັດເສດລາຄາ (Round Up 1000)
+        $rawAmount = $row['amount'];
+        $roundedAmount = ceil($rawAmount / 1000) * 1000;
+        $price = number_format($roundedAmount);
 
-        // --- ສ່ວນທີ 2: ລາຄາບັດ ---
-        $cardItems = $types['card'];
-        // ໃສ່ຫົວຂໍ້ "ລາຄາບັດເຕິມເງິນ" ແລະ ຊື່ເກມ
-        $headerCard = "\n    ລາຄາບັດເຕິມເງິນ\n* {$name} *"; 
-        $blockCard = implode("\n", $cardItems);
+        if (!isset($groupedData[$gameName])) {
+            $groupedData[$gameName] = [];
+        }
 
-        // ລວມທັງໝົດເປັນກ້ອນດຽວ
-        $fullText = $blockNormal . "\n" . $headerCard . "\n" . $blockCard;
-
-        $finalOutput[] = [
-            "game" => $name,
-            "items" => [ $fullText ] 
-        ];
+        // 🔥 Format ຂໍ້ຄວາມສຳລັບ Bot (Minimal Style)
+        // 💎 ຊື່ແພັກເກັດ : ລາຄາ ₭
+        $groupedData[$gameName][] = "💎 {$displayName} : {$price}₭";
     }
-}
 
-// ສະແດງຜົນ
-echo json_encode($finalOutput, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+    // ລວມຂໍ້ຄວາມທຸກເກມທີ່ຄົ້ນຫາເຈິ
+    foreach ($groupedData as $name => $items) {
+        $header = "🎮 {$name}"; // ໃສ່ Emoji ເກມ
+        $body = implode("\n", $items); // ລວມລາຍການດ້ວຍການລົງແຖວ
+        $finalTextList[] = $header . "\n" . $body;
+    }
+    
+    // ຖ້າເຈິຫຼາຍເກມ ໃຫ້ຂັ້ນດ້ວຍເສັ້ນປະ
+    $msg = implode("\n\n➖➖➖➖➖➖➖➖➖➖\n\n", $finalTextList);
+
+    // 6. ສົ່ງອອກ JSON (Object ດຽວ ງ່າຍສຳລັບ Botcake)
+    echo json_encode([
+        "success" => true,
+        "game_name" => $searchGame, // ສົ່ງຄຳຄົ້ນຫາກັບໄປ
+        "price_text" => $msg        // ✅ ເອົາໂຕນີ້ໄປໃຊ້ໃນ Bot
+    ], JSON_UNESCAPED_UNICODE);
+}
 ?>
