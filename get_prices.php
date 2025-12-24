@@ -83,7 +83,7 @@ if (empty($results)) {
         
         // 🔥 ສູດປັດເສດໃໝ່: ປັດຂຶ້ນໃຫ້ເຕັມ 1000 (ບໍ່ໃຫ້ມີເສດຮ້ອຍ)
         // ຕົວຢ່າງ: 12,800 -> 13,000
-        $cardAmountRounded = ceil($rawCardAmount / 1000) * 1000;
+        $cardAmountRounded = ceil($rawCardAmount / 10000) * 10000;
         
         $cardPrice = number_format($cardAmountRounded);
 

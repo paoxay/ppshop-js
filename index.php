@@ -85,7 +85,7 @@ $percent_add = 60;
                     $rawCardAmount = $roundedAmount + ($roundedAmount * ($percent_add / 100));
                     
                     // 🔥 ແກ້ໄຂ: ປັດເສດລາຄາບັດໃຫ້ເຕັມ 1000 (ຄືກັບ get_prices.php)
-                    $cardAmountRounded = ceil($rawCardAmount / 1000) * 1000;
+                    $cardAmountRounded = ceil($rawCardAmount / 10000) * 10000;
                     $cardPrice = number_format($cardAmountRounded);
 
                     $msgNormal .= "💎 {$item['display_name']} : {$price}₭\n";
