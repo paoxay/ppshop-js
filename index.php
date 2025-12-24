@@ -100,8 +100,8 @@
     </div>
 
     <script>
-        // URL ຂອງໄຟລ໌ API (ຢູ່ໃນໂຟນເດີດຽວກັນ)
-        const API_URL = 'get_prices.php'; 
+     // ຕື່ມ ?v=... ໃສ່ທາງຫຼັງເພື່ອໃຫ້ browser ຮູ້ວ່າເປັນໄຟລ໌ໃໝ່ສະເໝີ
+        const API_URL = 'get_prices.php?v=' + new Date().getTime();
         
         // Base URL ສຳລັບສ້າງລິ້ງໃຫ້ User Copy
         // ມັນຈະດຶງ Path ປັດຈຸບັນມາຕັດ index.php ອອກ

@@ -15,6 +15,11 @@ try {
     exit;
 }
 
+// ==========================================
+// ⚙️ ຕັ້ງຄ່າຄ່າທຳນຽມ (Config)
+// ==========================================
+$fee_percent = 60; // ໃສ່ເປີເຊັນທີ່ຕ້ອງການບວກເພີ່ມສຳລັບບັດເຕີມເງິນ (ຕົວຢ່າງ: 20%)
+
 // 2. ຮັບຄ່າຄົ້ນຫາ
 $searchGame = isset($_GET['game']) ? $_GET['game'] : null;
 
@@ -40,21 +45,31 @@ $groupedData = [];
 foreach ($results as $row) {
     $gameName = $row['game_name'];
     $packageName = $row['package_name'];
-    $rawAmount = $row['amount']; // ລາຄາດິບຈາກຖານຂໍ້ມູນ
+    $rawAmount = $row['amount'];
 
-    // 🔥 ຟັງຊັນປັດເສດຂຶ້ນເປັນຫຼັກ 1,000 (Round Up to nearest 1000)
-    // ຕົວຢ່າງ: 1,297,695 -> 1,298,000
-    $roundedAmount = ceil($rawAmount / 1000) * 1000;
+    // --- ຄິດໄລ່ລາຄາໂອນ (Normal) ---
+    // ປັດຂຶ້ນເປັນຫຼັກ 1,000
+    $roundedNormal = ceil($rawAmount / 1000) * 1000;
+    $priceNormal = number_format($roundedNormal); 
 
-    // ຈັດ Format ໃສ່ຈຸດ (,)
-    $price = number_format($roundedAmount); 
+    // --- ຄິດໄລ່ລາຄາບັດ (Card) ---
+    // ເອົາລາຄາໂອນ ມາບວກເປີເຊັນເພີ່ມ ($fee_percent)
+    $cardAmount = $roundedNormal * (1 + ($fee_percent / 100));
+    // ປັດຂຶ້ນເປັນຫຼັກ 1,000 ອີກຄັ້ງ
+    $roundedCard = ceil($cardAmount / 1000) * 1000;
+    $priceCard = number_format($roundedCard);
 
     if (!isset($groupedData[$gameName])) {
-        $groupedData[$gameName] = [];
+        // ແຍກ array ເກັບສອງແບບ
+        $groupedData[$gameName] = [
+            'normal' => [],
+            'card' => []
+        ];
     }
 
-    // ເພີ່ມຂໍ້ມູນ (ຍະຫວ່າງ 3 ບາດ)
-    $groupedData[$gameName][] = "   {$packageName} ລາຄາ {$price} ກີບ";
+    // ເພີ່ມຂໍ້ມູນ (ໃຊ້ Format : ແລະ ₭ ຕາມທີ່ຕ້ອງການ)
+    $groupedData[$gameName]['normal'][] = "   {$packageName} : {$priceNormal} ₭";
+    $groupedData[$gameName]['card'][]   = "   {$packageName} : {$priceCard} ₭";
 }
 
 // 5. ສ້າງ JSON ຜົນລັບ
@@ -63,17 +78,25 @@ $finalOutput = [];
 if (empty($groupedData)) {
     $finalOutput = ["status" => "error", "message" => "ບໍ່ພົບຂໍ້ມູນ"];
 } else {
-    foreach ($groupedData as $name => $items) {
+    foreach ($groupedData as $name => $types) {
         
-        // ໃສ່ຊື່ເກມໄວ້ເທິງສຸດ
-        array_unshift($items, "* {$name} *"); 
+        // --- ສ່ວນທີ 1: ລາຄາໂອນ ---
+        $normalItems = $types['normal'];
+        array_unshift($normalItems, "\n*{$name}*"); // ໃສ່ຫົວຂໍ້
+        $blockNormal = implode("\n", $normalItems);
 
-        // ລວມເປັນກ້ອນດຽວ
-        $oneBlockText = implode("\n", $items);
+        // --- ສ່ວນທີ 2: ລາຄາບັດ ---
+        $cardItems = $types['card'];
+        // ໃສ່ຫົວຂໍ້ "ລາຄາບັດເຕິມເງິນ" ແລະ ຊື່ເກມ
+        $headerCard = "\n    ລາຄາບັດເຕິມເງິນ\n* {$name} *"; 
+        $blockCard = implode("\n", $cardItems);
+
+        // ລວມທັງໝົດເປັນກ້ອນດຽວ
+        $fullText = $blockNormal . "\n" . $headerCard . "\n" . $blockCard;
 
         $finalOutput[] = [
             "game" => $name,
-            "items" => [ $oneBlockText ] 
+            "items" => [ $fullText ] 
         ];
     }
 }
