@@ -17,11 +17,13 @@ $groupedGames = [];
 foreach ($results as $row) {
     $gameName = $row['game_name'];
     $displayName = !empty($row['custom_name']) ? $row['custom_name'] : $row['package_name'];
-    
     $row['display_name'] = $displayName;
     $groupedGames[$gameName][] = $row;
 }
 $totalGames = count($groupedGames);
+
+// ⚙️ ຕັ້ງຄ່າເປີເຊັນບວກເພີ່ມ (ໃຫ້ຕົງກັບ get_prices.php)
+$percent_add = 60; 
 ?>
 
 <!DOCTYPE html>
@@ -38,9 +40,8 @@ $totalGames = count($groupedGames);
         body { font-family: 'Noto Sans Lao', sans-serif; background: #f4f6f9; }
         .card { border-radius: 12px; border:none; box-shadow: 0 4px 10px rgba(0,0,0,0.05); height: 100%; }
         .card:hover { transform: translateY(-5px); transition: 0.3s; }
-        .preview-box { background: #2d3436; color: #fff; padding: 10px; border-radius: 6px; font-size: 12px; font-family: monospace; white-space: pre-wrap; max-height: 150px; overflow-y: auto; }
+        .preview-box { background: #2d3436; color: #fff; padding: 10px; border-radius: 6px; font-size: 12px; font-family: monospace; white-space: pre-wrap; max-height: 200px; overflow-y: auto; }
         .btn-circle { border-radius: 50px; }
-        /* ແກ້ໄຂ Modal ໃຫ້ສະແດງຜົນຖືກຕ້ອງ */
         .modal-backdrop { z-index: 1040 !important; }
         .modal { z-index: 1050 !important; }
     </style>
@@ -66,22 +67,40 @@ $totalGames = count($groupedGames);
         
         <div class="row g-3" id="gameGrid">
             <?php 
-            $modalIndex = 0; // ✅ ໃຊ້ຕົວເລກແທນຊື່ ເພື່ອບໍ່ໃຫ້ ID ຜິດພາດ
+            $modalIndex = 0;
             foreach ($groupedGames as $gameName => $items): 
                 $modalIndex++; 
-                $modalID = "modal-edit-" . $modalIndex; // ສ້າງ ID ແບບງ່າຍໆ: modal-edit-1, modal-edit-2
+                $modalID = "modal-edit-" . $modalIndex; 
 
-                // ສ້າງ Preview Text
-                $previewText = "* {$gameName} *\n";
+                // --- ສ້າງ Preview Text ໃຫ້ຄືກັບ Bot ---
+                $msgNormal = "";
+                $msgCard = "";
+
                 foreach($items as $item) {
-                    $price = number_format(ceil($item['amount']/1000)*1000);
-                    $previewText .= "   {$item['display_name']} : {$price} ₭\n";
+                    // 1. ຄຳນວນລາຄາປົກກະຕິ (ປັດເສດ 1000)
+                    $roundedAmount = ceil($item['amount']/1000)*1000;
+                    $price = number_format($roundedAmount);
+                    
+                    // 2. ຄຳນວນລາຄາບັດ (+60%)
+                    $rawCardAmount = $roundedAmount + ($roundedAmount * ($percent_add / 100));
+                    
+                    // 🔥 ແກ້ໄຂ: ປັດເສດລາຄາບັດໃຫ້ເຕັມ 1000 (ຄືກັບ get_prices.php)
+                    $cardAmountRounded = ceil($rawCardAmount / 1000) * 1000;
+                    $cardPrice = number_format($cardAmountRounded);
+
+                    $msgNormal .= "💎 {$item['display_name']} : {$price}₭\n";
+                    $msgCard .= "💎 {$item['display_name']} : {$cardPrice}₭\n";
                 }
+
+                $previewText = "🏷️ ປະຈຸບັນ (ລາຄາໂອນ)\n🎮 {$gameName}\n{$msgNormal}\n";
+                $previewText .= "➖➖➖➖➖➖➖➖➖➖\n\n";
+                $previewText .= "💳 ລາຄາບັດເຕີມເງິນ\n🎮 {$gameName}\n{$msgCard}";
                 
-                // ສ້າງ Link
+                // ສ້າງ Link API
                 $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http";
                 $host = $_SERVER['HTTP_HOST'];
                 $path = dirname($_SERVER['PHP_SELF']);
+                $path = rtrim($path, '/');
                 $apiLink = "$protocol://$host$path/get_prices.php?game=" . rawurlencode(trim($gameName));
             ?>
             
@@ -89,7 +108,6 @@ $totalGames = count($groupedGames);
                 <div class="card">
                     <div class="card-header bg-white fw-bold text-primary d-flex justify-content-between align-items-center border-0 pt-3">
                         <span class="text-truncate pe-2"><?php echo $gameName; ?></span>
-                        
                         <button type="button" class="btn btn-sm btn-warning btn-circle px-3" 
                                 data-bs-toggle="modal" 
                                 data-bs-target="#<?php echo $modalID; ?>">
@@ -98,7 +116,7 @@ $totalGames = count($groupedGames);
                     </div>
 
                     <div class="card-body">
-                        <p class="small text-muted mb-1 fw-bold">ຕົວຢ່າງ:</p>
+                        <p class="small text-muted mb-1 fw-bold">ຕົວຢ່າງຜົນຮັບ (Bot Preview):</p>
                         <div class="preview-box mb-3"><?php echo $previewText; ?></div>
                         
                         <div class="input-group input-group-sm mb-2">
@@ -182,7 +200,7 @@ $totalGames = count($groupedGames);
             const btn = input.parentElement.nextElementSibling.querySelector('button');
             const icon = btn.querySelector('i');
 
-            icon.className = 'fas fa-spinner fa-spin'; // ໝຸນຕິ້ວໆ
+            icon.className = 'fas fa-spinner fa-spin'; 
             
             fetch('save_name.php', {
                 method: 'POST',
@@ -197,7 +215,9 @@ $totalGames = count($groupedGames);
                     setTimeout(() => {
                         btn.classList.replace('btn-success', 'btn-primary');
                         icon.className = 'fas fa-save';
-                    }, 2000);
+                        // ແນະນຳ: Refresh ໜ້າຈໍເພື່ອໃຫ້ຕົວຢ່າງອັບເດດນຳ
+                         location.reload(); 
+                    }, 1000);
                 } else {
                     alert('ເກີດຂໍ້ຜິດພາດໃນການບັນທຶກ!');
                     icon.className = 'fas fa-save';
@@ -209,6 +229,5 @@ $totalGames = count($groupedGames);
             });
         }
     </script>
-
 </body>
 </html>
