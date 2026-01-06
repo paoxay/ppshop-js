@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Dec 24, 2025 at 03:17 AM
+-- Generation Time: Jan 06, 2026 at 08:58 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.0.30
 
@@ -189,10 +189,10 @@ INSERT INTO `game_packages` (`id`, `package_id_api`, `idgame`, `game_name`, `pac
 (143, '690cc0ddbceff1a870cc44b7', '690cc0dcbceff1a870cc44b4', 'valorant (ລາວ)', '975 Points (VP)', NULL, 238550.00, 2, '2025-12-23 04:36:31'),
 (144, '690cc0ddbceff1a870cc44b8', '690cc0dcbceff1a870cc44b4', 'valorant (ລາວ)', '1,975 Points (VP)', NULL, 477338.00, 3, '2025-12-23 04:36:31'),
 (145, '690cc0ddbceff1a870cc44b9', '690cc0dcbceff1a870cc44b4', 'valorant (ລາວ)', '3,550  Points (VP)', NULL, 844668.00, 4, '2025-12-23 04:36:31'),
-(146, '64ed7aa8e29bc17718327fe4', '64ed7aa8e29bc17718327fdb', ' Riot Prepaid Card (TH)', '139 บาท (500 RP)', NULL, 110000.00, 1, '2025-12-04 05:43:25'),
-(147, '64ed7aa8e29bc17718327fe6', '64ed7aa8e29bc17718327fdb', ' Riot Prepaid Card (TH)', '279 บาท (1,050 RP)', NULL, 210000.00, 2, '2025-12-04 05:43:26'),
-(148, '64ed7aa9e29bc17718327fe8', '64ed7aa8e29bc17718327fdb', ' Riot Prepaid Card (TH)', '559 บาท (2,175 RP)', NULL, 395000.00, 3, '2025-12-04 05:43:26'),
-(149, '64ed7aa9e29bc17718327fea', '64ed7aa8e29bc17718327fdb', ' Riot Prepaid Card (TH)', '979 บาท (3,850 RP)', NULL, 720000.00, 4, '2025-12-04 05:43:26'),
+(146, '64ed7aa8e29bc17718327fe4', '64ed7aa8e29bc17718327fdb', ' Riot Prepaid Card (TH)', '139 บาท (500 RP)', '500 RP', 110000.00, 1, '2025-12-24 08:41:33'),
+(147, '64ed7aa8e29bc17718327fe6', '64ed7aa8e29bc17718327fdb', ' Riot Prepaid Card (TH)', '279 บาท (1,050 RP)', '1,050 RP', 210000.00, 2, '2025-12-24 08:41:52'),
+(148, '64ed7aa9e29bc17718327fe8', '64ed7aa8e29bc17718327fdb', ' Riot Prepaid Card (TH)', '559 บาท (2,175 RP)', '2,175 RP', 395000.00, 3, '2025-12-24 08:42:06'),
+(149, '64ed7aa9e29bc17718327fea', '64ed7aa8e29bc17718327fdb', ' Riot Prepaid Card (TH)', '979 บาท (3,850 RP)', '3,850 RP', 720000.00, 4, '2025-12-24 08:42:05'),
 (150, '690cc211bceff1a870cce5c5', '690cc211bceff1a870cce5c3', 'Riot Access Code (US)', ' USD 5', NULL, 112860.00, 1, '2025-12-23 04:36:33'),
 (151, '690cc211bceff1a870cce5c6', '690cc211bceff1a870cce5c3', 'Riot Access Code (US)', 'USD 10', NULL, 225720.00, 2, '2025-12-23 04:36:33'),
 (152, '690cc211bceff1a870cce5c7', '690cc211bceff1a870cce5c3', 'Riot Access Code (US)', ' USD 15', NULL, 356400.00, 3, '2025-12-23 04:36:33'),
@@ -891,6 +891,31 @@ INSERT INTO `game_packages` (`id`, `package_id_api`, `idgame`, `game_name`, `pac
 (843, '69461485950e270f234c5abc', '69461484950e270f234c5ab1', 'Where Winds Meet', ' Premium Battle Pass', NULL, 484650.00, 23, '2025-12-23 04:37:24'),
 (844, '69494ae2950e270f23d32c72', '66f30bdb887e226c6d6be2ee', 'Mobile Legends (ລາວ+ນອກ)', 'ແພັກສຸດຄຸ່ມຈຳກັດເວລາ', NULL, 6964.00, 15, '2025-12-23 04:37:53');
 
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `orders`
+--
+
+CREATE TABLE `orders` (
+  `id` int(11) NOT NULL,
+  `game_name` varchar(255) NOT NULL,
+  `package_name` varchar(255) NOT NULL,
+  `price` decimal(10,2) NOT NULL,
+  `uid` varchar(100) NOT NULL,
+  `slip_no` varchar(100) DEFAULT NULL,
+  `slip_image` varchar(255) DEFAULT NULL,
+  `status` enum('pending','completed','cancelled') DEFAULT 'pending',
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `orders`
+--
+
+INSERT INTO `orders` (`id`, `game_name`, `package_name`, `price`, `uid`, `slip_no`, `slip_image`, `status`, `created_at`) VALUES
+(2, 'free fire TH', '33 Diamond', 8000.00, '404825', '5545454545', 'uploads/slip_1767707761_2116.png', 'completed', '2026-01-06 13:56:01');
+
 --
 -- Indexes for dumped tables
 --
@@ -903,6 +928,12 @@ ALTER TABLE `game_packages`
   ADD UNIQUE KEY `unique_pkg` (`package_id_api`);
 
 --
+-- Indexes for table `orders`
+--
+ALTER TABLE `orders`
+  ADD PRIMARY KEY (`id`);
+
+--
 -- AUTO_INCREMENT for dumped tables
 --
 
@@ -911,6 +942,12 @@ ALTER TABLE `game_packages`
 --
 ALTER TABLE `game_packages`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=845;
+
+--
+-- AUTO_INCREMENT for table `orders`
+--
+ALTER TABLE `orders`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
